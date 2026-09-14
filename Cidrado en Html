@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>César / Atbash — Taller de criptografía</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* ======================= TOKENS ======================= */
+  :root{
+    --ink-950:#0d1320;
+    --ink-900:#141c2e;
+    --ink-800:#1d2740;
+    --ink-700:#2a3654;
+    --line:#33405f;
+    --parchment:#eadfc4;
+    --parchment-dim:#a9a690;
+    --brass:#c99a3b;
+    --brass-dim:#8a6d2c;
+    --verdigris:#5b9184;
+    --error:#c1543f;
+    --radius:3px;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 600px at 15% -10%, #17203560, transparent 60%),
+      var(--ink-950);
+    color:var(--parchment);
+    font-family:'Inter', system-ui, sans-serif;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--brass); color:var(--ink-950);}
+
+  a{color:var(--brass);}
+
+  .wrap{
+    max-width:920px;
+    margin:0 auto;
+    padding:64px 24px 96px;
+  }
+
+  /* ======================= HERO ======================= */
+  .hero{
+    display:grid;
+    grid-template-columns:1.1fr 0.9fr;
+    gap:40px;
+    align-items:center;
+    padding-bottom:56px;
+    border-bottom:1px solid var(--line);
+    margin-bottom:56px;
+  }
+  @media (max-width:760px){
+    .hero{grid-template-columns:1fr; text-align:left;}
+  }
+  .mark{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px;
+    letter-spacing:.04em;
+    color:var(--brass);
+    margin:0 0 18px;
+  }
+  h1{
+    font-family:'Cormorant Garamond', serif;
+    font-weight:600;
+    font-size:52px;
+    line-height:1.05;
+    margin:0 0 18px;
+    color:var(--parchment);
+  }
+  .hero p{
+    max-width:46ch;
+    color:var(--parchment-dim);
+    font-size:16px;
+    margin:0;
+  }
+
+  /* Cipher wheel */
+  .wheel-box{display:flex; justify-content:center;}
+  #wheel{width:100%; max-width:280px; height:auto;}
+  .wheel-ring-outer text{fill:var(--parchment-dim); font-family:'IBM Plex Mono', monospace; font-size:9px;}
+  .wheel-ring-inner text{fill:var(--brass); font-family:'IBM Plex Mono', monospace; font-size:9px;}
+  #wheel-inner-group{transition: transform .5s cubic-bezier(.2,.8,.2,1);}
+
+  /* ======================= SECTIONS ======================= */
+  section{margin-bottom:52px;}
+  .step-head{
+    display:flex;
+    align-items:baseline;
+    gap:12px;
+    margin-bottom:18px;
+  }
+  .step-num{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px;
+    color:var(--brass-dim);
+  }
+  h2{
+    font-family:'Cormorant Garamond', serif;
+    font-weight:600;
+    font-size:26px;
+    margin:0;
+    color:var(--parchment);
+  }
+  .lede{
+    color:var(--parchment-dim);
+    font-size:14.5px;
+    margin:0 0 20px;
+    max-width:64ch;
+  }
+
+  .panel{
+    background:var(--ink-900);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:24px;
+  }
+
+  .two-col{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:24px;
+  }
+  @media (max-width:760px){ .two-col{grid-template-columns:1fr;} }
+
+  label{
+    display:block;
+    font-size:12.5px;
+    color:var(--parchment-dim);
+    margin-bottom:6px;
+  }
+  .field{margin-bottom:16px;}
+
+  input[type=text], input[type=number], textarea, select{
+    width:100%;
+    background:var(--ink-800);
+    border:1px solid var(--line);
+    color:var(--parchment);
+    padding:10px 12px;
+    border-radius:var(--radius);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13.5px;
+  }
+  textarea{resize:vertical; min-height:76px;}
+  input:focus, textarea:focus, select:focus, button:focus{
+    outline:2px solid var(--brass);
+    outline-offset:1px;
+  }
+
+  .preset-row{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px;}
+  .chip{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    padding:6px 10px;
+    border:1px solid var(--line);
+    border-radius:20px;
+    background:transparent;
+    color:var(--parchment-dim);
+    cursor:pointer;
+  }
+  .chip.active{
+    border-color:var(--brass);
+    color:var(--brass);
+  }
+
+  .radio-row{display:flex; gap:18px; margin-bottom:16px;}
+  .radio-row label{
+    display:flex; align-items:center; gap:6px;
+    font-size:13.5px; color:var(--parchment);
+    margin:0;
+  }
+
+  button.primary{
+    background:var(--brass);
+    color:var(--ink-950);
+    border:none;
+    font-weight:600;
+    font-size:14px;
+    padding:11px 20px;
+    border-radius:var(--radius);
+    cursor:pointer;
+    font-family:'Inter', sans-serif;
+  }
+  button.primary:hover{background:#dcae52;}
+  button.ghost{
+    background:transparent;
+    border:1px solid var(--line);
+    color:var(--parchment-dim);
+    font-size:12px;
+    padding:6px 10px;
+    border-radius:var(--radius);
+    cursor:pointer;
+    font-family:'IBM Plex Mono', monospace;
+  }
+  button.ghost:hover{color:var(--parchment); border-color:var(--parchment-dim);}
+
+  .output-box{
+    margin-top:14px;
+    background:var(--ink-800);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:14px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13.5px;
+    word-break:break-word;
+    min-height:20px;
+  }
+
+  .result-card{
+    margin-top:16px;
+    border-left:3px solid var(--verdigris);
+    background:var(--ink-800);
+    padding:16px 18px;
+    border-radius:var(--radius);
+  }
+  .result-tag{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11.5px;
+    color:var(--verdigris);
+    margin-bottom:8px;
+  }
+  .result-text{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:15px;
+    color:var(--parchment);
+  }
+
+  details{margin-top:14px;}
+  summary{
+    cursor:pointer;
+    font-size:12.5px;
+    color:var(--parchment-dim);
+    font-family:'IBM Plex Mono', monospace;
+  }
+  table{width:100%; border-collapse:collapse; margin-top:10px; font-size:12.5px;}
+  th,td{
+    text-align:left;
+    padding:6px 8px;
+    border-bottom:1px solid var(--line);
+    font-family:'IBM Plex Mono', monospace;
+    color:var(--parchment-dim);
+  }
+  th{color:var(--parchment);}
+
+  .note{
+    font-size:12.5px;
+    color:var(--parchment-dim);
+    margin-top:10px;
+  }
+
+  footer{
+    border-top:1px solid var(--line);
+    padding-top:24px;
+    color:var(--parchment-dim);
+    font-size:12.5px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ======================= HERO ======================= -->
+  <div class="hero">
+    <div>
+      <p class="mark">Taller de criptografía clásica</p>
+      <h1>César y Atbash,<br>rotos por estadística.</h1>
+      <p>Cifra y descifra mensajes con dos de los métodos de sustitución más
+      antiguos. El descifrado no pide el método: lo determina el sistema,
+      igual que lo hizo por primera vez Al-Kindi en el siglo IX al comparar
+      las frecuencias de un texto cifrado contra las del idioma.</p>
+    </div>
+    <div class="wheel-box">
+      <svg id="wheel" viewBox="0 0 260 260">
+        <circle cx="130" cy="130" r="122" fill="none" stroke="#33405f" stroke-width="1"/>
+        <circle cx="130" cy="130" r="88" fill="none" stroke="#33405f" stroke-width="1"/>
+        <g class="wheel-ring-outer" id="wheel-outer-group"></g>
+        <g class="wheel-ring-inner" id="wheel-inner-group"></g>
+        <circle cx="130" cy="130" r="4" fill="#c99a3b"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- ======================= PASO 1: ALFABETO ======================= -->
+  <section>
+    <div class="step-head">
+      <span class="step-num">01</span>
+      <h2>Define el conjunto de caracteres</h2>
+    </div>
+    <p class="lede">Este alfabeto es la base sobre la que operan tanto César como
+    Atbash. Puedes usar un preset o escribir cualquier conjunto de símbolos
+    propio, estén o no en el código ASCII estándar.</p>
+
+    <div class="panel">
+      <div class="preset-row" id="presetRow"></div>
+
+      <div class="field">
+        <label for="alphabetInput">Alfabeto activo (editable)</label>
+        <input type="text" id="alphabetInput" spellcheck="false">
+      </div>
+
+      <div class="two-col">
+        <div class="field">
+          <label for="asciiStart">Rango ASCII — inicio</label>
+          <input type="number" id="asciiStart" placeholder="32">
+        </div>
+        <div class="field">
+          <label for="asciiEnd">Rango ASCII — fin</label>
+          <input type="number" id="asciiEnd" placeholder="126">
+        </div>
+      </div>
+      <button class="ghost" id="applyAscii">Generar desde rango ASCII</button>
+      <p class="note" id="alphabetCount"></p>
+    </div>
+  </section>
+
+  <!-- ======================= PASO 2: CIFRAR ======================= -->
+  <section>
+    <div class="step-head">
+      <span class="step-num">02</span>
+      <h2>Cifra un mensaje</h2>
+    </div>
+    <p class="lede">Elige el módulo de cifrado. Con César defines el
+    desplazamiento; con Atbash no hace falta ningún parámetro adicional.</p>
+
+    <div class="panel">
+      <div class="radio-row">
+        <label><input type="radio" name="method" value="cesar" checked> César</label>
+        <label><input type="radio" name="method" value="atbash"> Atbash</label>
+      </div>
+
+      <div class="field" id="shiftField">
+        <label for="shiftInput">Desplazamiento (módulo)</label>
+        <input type="number" id="shiftInput" value="3">
+      </div>
+
+      <div class="field">
+        <label for="plainInput">Mensaje a cifrar</label>
+        <textarea id="plainInput">la criptografia clasica ya no protege nada</textarea>
+      </div>
+
+      <button class="primary" id="encryptBtn">Cifrar</button>
+      <div class="output-box" id="encryptOutput"></div>
+    </div>
+  </section>
+
+  <!-- ======================= PASO 3: DESCIFRAR AUTOMÁTICO ======================= -->
+  <section>
+    <div class="step-head">
+      <span class="step-num">03</span>
+      <h2>Descifra — detección automática</h2>
+    </div>
+    <p class="lede">Pega un texto cifrado. El sistema prueba Atbash y los
+    N desplazamientos posibles de César, evalúa cada resultado con análisis
+    de frecuencias del español y muestra solo el que estadísticamente es el
+    texto correcto. No eliges el método: lo decide el análisis.</p>
+
+    <div class="panel">
+      <div class="field">
+        <label for="cipherInput">Mensaje cifrado</label>
+        <textarea id="cipherInput"></textarea>
+      </div>
+      <button class="primary" id="decryptBtn">Descifrar automáticamente</button>
+
+      <div class="result-card" id="resultCard" style="display:none;">
+        <div class="result-tag" id="resultTag"></div>
+        <div class="result-text" id="resultText"></div>
+      </div>
+
+      <details id="analysisDetails" style="display:none;">
+        <summary>Ver cómo se determinó (análisis de frecuencias, método de Al-Kindi)</summary>
+        <table>
+          <thead><tr><th>Candidato</th><th>Módulo</th><th>χ² (menor = más probable)</th></tr></thead>
+          <tbody id="analysisBody"></tbody>
+        </table>
+      </details>
+    </div>
+  </section>
+
+  <footer>
+    Sistema educativo de cifrado por sustitución (César / Atbash) con
+    criptoanálisis por frecuencias automatizado — inspirado en el trabajo de
+    Al-Kindi (siglo IX). Todo el cifrado, descifrado y análisis ocurre en tu
+    navegador; ningún texto se envía a un servidor.
+  </footer>
+
+</div>
+
+<script>
+/* ============================================================================
+   MOTOR DE CIFRADO — compartido por César y Atbash (misma lógica que la
+   versión de terminal en Python, para mantener ambas implementaciones
+   consistentes).
+============================================================================ */
+
+const PRESETS = {
+  "Minúsculas (a-z)": "abcdefghijklmnopqrstuvwxyz",
+  "Mayúsculas (A-Z)": "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+  "Letras a-z A-Z": "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
+  "Letras + dígitos": "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+  "ASCII imprimible (32-126)": asciiRange(32, 126),
+};
+
+function asciiRange(start, end){
+  let s = "";
+  for(let c = start; c <= end; c++) s += String.fromCharCode(c);
+  return s;
+}
+
+function cifrarCesar(texto, alfabeto, desplazamiento){
+  const n = alfabeto.length;
+  let salida = "";
+  for(const ch of texto){
+    const idx = alfabeto.indexOf(ch);
+    if(idx === -1){ salida += ch; continue; }
+    let nuevo = (idx + desplazamiento) % n;
+    if(nuevo < 0) nuevo += n;
+    salida += alfabeto[nuevo];
+  }
+  return salida;
+}
+
+function descifrarCesar(texto, alfabeto, desplazamiento){
+  return cifrarCesar(texto, alfabeto, -desplazamiento);
+}
+
+function cifrarAtbash(texto, alfabeto){
+  const n = alfabeto.length;
+  let salida = "";
+  for(const ch of texto){
+    const idx = alfabeto.indexOf(ch);
+    if(idx === -1){ salida += ch; continue; }
+    salida += alfabeto[n - 1 - idx];
+  }
+  return salida;
+}
+
+/* ============================================================================
+   CRIPTOANÁLISIS POR FRECUENCIAS — método de Al-Kindi (s. IX), automatizado.
+   Se compara la distribución de letras del texto candidato contra las
+   frecuencias esperadas del español mediante la prueba chi-cuadrada.
+   Valor MÁS BAJO = MÁS PARECIDO al español real.
+============================================================================ */
+const FREQ_ESPANOL = {
+  a:12.53, b:1.42, c:4.68, d:5.86, e:13.68, f:0.69, g:1.01, h:0.70,
+  i:6.25, j:0.44, k:0.02, l:4.97, m:3.15, n:6.71, "ñ":0.31, o:8.68,
+  p:2.51, q:0.88, r:6.87, s:7.98, t:4.63, u:3.93, v:0.90, w:0.02,
+  x:0.22, y:0.90, z:0.52,
+};
+
+function chiCuadradaTexto(texto){
+  const letras = [...texto.toLowerCase()].filter(c => c in FREQ_ESPANOL);
+  const total = letras.length;
+  if(total === 0) return Infinity;
+
+  const conteo = {};
+  for(const l in FREQ_ESPANOL) conteo[l] = 0;
+  for(const l of letras) conteo[l]++;
+
+  let chi2 = 0;
+  for(const letra in FREQ_ESPANOL){
+    const esperado = (FREQ_ESPANOL[letra] / 100) * total;
+    const observado = conteo[letra];
+    if(esperado > 0) chi2 += ((observado - esperado) ** 2) / esperado;
+  }
+  return chi2;
+}
+
+/**
+ * Determina automáticamente el método de cifrado (Atbash o César, y en
+ * este caso el módulo) probando TODAS las posibilidades y quedándose con
+ * la de menor chi-cuadrada. El usuario nunca elige el resultado: solo se
+ * muestra el mejor candidato.
+ */
+function descifrarAutomatico(textoCifrado, alfabeto){
+  const candidatos = [];
+
+  const textoAtbash = cifrarAtbash(textoCifrado, alfabeto);
+  candidatos.push({ metodo: "ATBASH", modulo: null, texto: textoAtbash, score: chiCuadradaTexto(textoAtbash) });
+
+  const n = alfabeto.length;
+  for(let desplazamiento = 0; desplazamiento < n; desplazamiento++){
+    const textoCesar = descifrarCesar(textoCifrado, alfabeto, desplazamiento);
+    candidatos.push({ metodo: "CESAR", modulo: desplazamiento, texto: textoCesar, score: chiCuadradaTexto(textoCesar) });
+  }
+
+  candidatos.sort((a, b) => a.score - b.score);
+  return candidatos; // el índice 0 es el ganador
+}
+
+/* ============================================================================
+   INTERFAZ
+============================================================================ */
+const alphabetInput = document.getElementById("alphabetInput");
+const alphabetCount = document.getElementById("alphabetCount");
+const presetRow = document.getElementById("presetRow");
+
+function currentAlphabet(){
+  return alphabetInput.value;
+}
+
+function refreshAlphabetCount(){
+  alphabetCount.textContent = `${currentAlphabet().length} símbolos en el alfabeto activo.`;
+}
+
+// Presets
+Object.entries(PRESETS).forEach(([nombre, valor], i) => {
+  const btn = document.createElement("button");
+  btn.className = "chip" + (i === 0 ? " active" : "");
+  btn.textContent = nombre;
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".chip").forEach(c => c.classList.remove("active"));
+    btn.classList.add("active");
+    alphabetInput.value = valor;
+    refreshAlphabetCount();
+  });
+  presetRow.appendChild(btn);
+});
+alphabetInput.value = PRESETS["Minúsculas (a-z)"];
+alphabetInput.addEventListener("input", refreshAlphabetCount);
+refreshAlphabetCount();
+
+document.getElementById("applyAscii").addEventListener("click", () => {
+  const start = parseInt(document.getElementById("asciiStart").value, 10);
+  const end = parseInt(document.getElementById("asciiEnd").value, 10);
+  if(Number.isNaN(start) || Number.isNaN(end)){
+    alert("Ingresa un código ASCII inicial y final válidos.");
+    return;
+  }
+  document.querySelectorAll(".chip").forEach(c => c.classList.remove("active"));
+  alphabetInput.value = asciiRange(Math.min(start,end), Math.max(start,end));
+  refreshAlphabetCount();
+});
+
+// Método (César / Atbash) — mostrar/ocultar el campo de desplazamiento
+const shiftField = document.getElementById("shiftField");
+document.querySelectorAll('input[name="method"]').forEach(radio => {
+  radio.addEventListener("change", () => {
+    shiftField.style.display = document.querySelector('input[name="method"]:checked').value === "cesar" ? "block" : "none";
+  });
+});
+
+// Cifrar
+document.getElementById("encryptBtn").addEventListener("click", () => {
+  const alfabeto = currentAlphabet();
+  const metodo = document.querySelector('input[name="method"]:checked').value;
+  const mensaje = document.getElementById("plainInput").value;
+  const out = document.getElementById("encryptOutput");
+
+  if(!alfabeto.length){ out.textContent = "Define primero un alfabeto."; return; }
+
+  if(metodo === "cesar"){
+    const despl = parseInt(document.getElementById("shiftInput").value, 10) || 0;
+    out.textContent = cifrarCesar(mensaje, alfabeto, despl);
+  } else {
+    out.textContent = cifrarAtbash(mensaje, alfabeto);
+  }
+});
+
+// Descifrar automático
+document.getElementById("decryptBtn").addEventListener("click", () => {
+  const alfabeto = currentAlphabet();
+  const cifrado = document.getElementById("cipherInput").value;
+  if(!alfabeto.length || !cifrado.length) return;
+
+  const candidatos = descifrarAutomatico(cifrado, alfabeto);
+  const ganador = candidatos[0];
+
+  const card = document.getElementById("resultCard");
+  const tag = document.getElementById("resultTag");
+  const text = document.getElementById("resultText");
+  card.style.display = "block";
+
+  tag.textContent = ganador.metodo === "ATBASH"
+    ? "Método detectado: ATBASH"
+    : `Método detectado: CÉSAR — módulo ${ganador.modulo}`;
+  text.textContent = ganador.texto;
+
+  // Panel de transparencia del análisis (top 5 candidatos)
+  const details = document.getElementById("analysisDetails");
+  const body = document.getElementById("analysisBody");
+  body.innerHTML = "";
+  candidatos.slice(0, 5).forEach(c => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${c.metodo}</td><td>${c.modulo === null ? "—" : c.modulo}</td><td>${c.score === Infinity ? "∞" : c.score.toFixed(2)}</td>`;
+    body.appendChild(tr);
+  });
+  details.style.display = "block";
+});
+
+/* ============================================================================
+   Rueda de cifrado (decorativa) — ilustra el concepto clásico del disco de
+   César: un anillo fijo y un anillo interior que rota con el desplazamiento.
+============================================================================ */
+const LETTERS26 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+function buildRing(groupId, radius, letters){
+  const g = document.getElementById(groupId);
+  const n = letters.length;
+  letters.split("").forEach((ch, i) => {
+    const angle = (i / n) * 2 * Math.PI - Math.PI / 2;
+    const x = 130 + radius * Math.cos(angle);
+    const y = 130 + radius * Math.sin(angle);
+    const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    t.setAttribute("x", x);
+    t.setAttribute("y", y);
+    t.setAttribute("text-anchor", "middle");
+    t.setAttribute("dominant-baseline", "middle");
+    t.textContent = ch;
+    g.appendChild(t);
+  });
+}
+buildRing("wheel-outer-group", 122, LETTERS26);
+buildRing("wheel-inner-group", 88, LETTERS26);
+
+function rotateWheel(){
+  const despl = parseInt(document.getElementById("shiftInput").value, 10) || 0;
+  const grados = (despl / 26) * 360;
+  document.getElementById("wheel-inner-group").setAttribute(
+    "transform", `rotate(${grados} 130 130)`
+  );
+}
+document.getElementById("shiftInput").addEventListener("input", rotateWheel);
+rotateWheel();
+</script>
+</body>
+</html>
